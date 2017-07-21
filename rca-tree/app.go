@@ -11,6 +11,6 @@ type app struct {
 
 // App include application name and version
 var App = app{
-	Name:    "rca-cluster-tree",
+	Name:    "rca-tree",
 	Version: rca.App.Version,
 }
