@@ -78,7 +78,22 @@ func ClusterNodes(client *redis.Client) (cluster []ClusterNode, err error) {
 	return cluster, nil
 }
 
-// AssertEmptyNode check node empty and return nil if node is empty
+// DescribeIP return IP, when string is hostname it resolve hostname, or ip return ip, nor returns nil
+func DescribeIP(s string) (ip net.IP, err error) {
+	ip = net.ParseIP(s)
+	if ip != nil {
+		addrs, err := net.LookupAddr(s)
+		if err != nil {
+			err = errors.Wrap(err, fmt.Sprintf("%v-%v failed: ", App.Name, App.Version))
+			return nil, err
+		}
+		ip = net.ParseIP(addrs[0])
+		return ip, nil
+	}
+	return ip, nil
+}
+
+// AssertEmptyNode check node empty and returns nil if node is empty
 func AssertEmptyNode(client *redis.Client) (err error) {
 	resp, err := client.ClusterInfo().Result()
 	if err != nil {
