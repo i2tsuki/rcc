@@ -55,14 +55,14 @@ func main() {
 
 	args := flags.Args()
 	var master string
-	var slaves []string
-	if len(args) < 1 {
+	var slave string
+	if len(args) != 2 {
 		usage()
 		os.Exit(0)
 	} else {
 		master = args[len(args)-1]
 	}
-	slaves = args[0 : len(args)-1]
+	slave = args[len(args)-2]
 
 	masterClient := redis.NewClient(&redis.Options{
 		Addr: master,
@@ -86,34 +86,32 @@ func main() {
 	masterIP := myself.IP
 	masterPort := fmt.Sprintf("%d", myself.Port)
 
-	for _, slave := range slaves {
-		slaveClient := redis.NewClient(&redis.Options{
-			Addr: slave,
-		})
-		// ToDo: Assert new slave node is cluster
-		// Assert new slave node is empty
-		if err := rca.AssertEmptyNode(slaveClient); err != nil {
-			err = errors.Wrap(err, fmt.Sprintf("%v-%v failed: ", App.Name, App.Version))
-			fmt.Fprintf(os.Stderr, "%+v", err)
-			os.Exit(1)
-		}
-		if _, err := slaveClient.ClusterMeet(masterIP, masterPort).Result(); err != nil {
-			err = errors.Wrap(err, fmt.Sprintf("%v-%v failed: ", App.Name, App.Version))
-			fmt.Fprintf(os.Stderr, "%+v", err)
-			os.Exit(1)
-		}
-		// getConfigSignature := func() {
+	slaveClient := redis.NewClient(&redis.Options{
+		Addr: slave,
+	})
+	// ToDo: Assert new slave node is cluster
+	// Assert new slave node is empty
+	if err := rca.AssertEmptyNode(slaveClient); err != nil {
+		err = errors.Wrap(err, fmt.Sprintf("%v-%v failed: ", App.Name, App.Version))
+		fmt.Fprintf(os.Stderr, "%+v", err)
+		os.Exit(1)
+	}
+	if _, err := slaveClient.ClusterMeet(masterIP, masterPort).Result(); err != nil {
+		err = errors.Wrap(err, fmt.Sprintf("%v-%v failed: ", App.Name, App.Version))
+		fmt.Fprintf(os.Stderr, "%+v", err)
+		os.Exit(1)
+	}
+	// getConfigSignature := func() {
 
-		// }
-		// WaitClusterJoin()
-		time.Sleep(5 * time.Second)
+	// }
+	// WaitClusterJoin()
+	time.Sleep(5 * time.Second)
 
-		fmt.Printf("configure node as replica of %s\n", master)
-		if _, err := slaveClient.ClusterReplicate(masterID).Result(); err != nil {
-			err = errors.Wrap(err, fmt.Sprintf("%v-%v failed: ", App.Name, App.Version))
-			fmt.Fprintf(os.Stderr, "%+v", err)
-			os.Exit(1)
-		}
+	fmt.Printf("configure node as replica of %s\n", master)
+	if _, err := slaveClient.ClusterReplicate(masterID).Result(); err != nil {
+		err = errors.Wrap(err, fmt.Sprintf("%v-%v failed: ", App.Name, App.Version))
+		fmt.Fprintf(os.Stderr, "%+v", err)
+		os.Exit(1)
 	}
 	fmt.Print("new nodes added correctly\n")
 }
