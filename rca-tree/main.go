@@ -79,10 +79,11 @@ func main() {
 		if !master.Slave {
 			nmaster--
 			if nmaster > 0 {
-				fmt.Printf("├─ %s:%d %s", master.Host, master.Port, master.ID)
+				fmt.Print("├─ ")
 			} else {
-				fmt.Printf("└─ %s:%d %s", master.Host, master.Port, master.ID)
+				fmt.Print("└─ ")
 			}
+			fmt.Printf("%s %s:%d ", master.ID, master.Host, master.Port)
 			fmt.Print("[")
 			for i, state := range master.States {
 				if len(master.States)-1 != i {
@@ -110,10 +111,11 @@ func main() {
 							fmt.Print("    ")
 						}
 						if nslave > 0 {
-							fmt.Printf("├── %s:%d,%s", slave.Host, slave.Port, slave.ID)
+							fmt.Print("├── ")
 						} else {
-							fmt.Printf("└── %s:%d,%s", slave.Host, slave.Port, slave.ID)
+							fmt.Print("└── ")
 						}
+						fmt.Printf("%s %s:%d ", slave.ID, slave.Host, slave.Port)
 						fmt.Print("[")
 						for i, state := range slave.States {
 							if len(slave.States)-1 != i {
