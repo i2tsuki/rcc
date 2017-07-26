@@ -25,19 +25,6 @@ func (debug debug) Printf(f string, v ...interface{}) {
 // DEBUG is global debug type
 var DEBUG debug
 
-// ClusterNode is redis cluster node struct
-type ClusterNode struct {
-	id string
-	// FIXME: ip addr
-	ip      string
-	host    string
-	port    uint64
-	states  []string
-	slave   bool
-	master  bool
-	slaveof string
-}
-
 func main() {
 	var help = false
 	var verbose = false
