@@ -79,9 +79,9 @@ func main() {
 		if !master.Slave {
 			nmaster--
 			if nmaster > 0 {
-				fmt.Printf("├─ %s:%d,%s", master.Host, master.Port, master.ID)
+				fmt.Printf("├─ %s:%d %s", master.Host, master.Port, master.ID)
 			} else {
-				fmt.Printf("└─ %s:%d,%s", master.Host, master.Port, master.ID)
+				fmt.Printf("└─ %s:%d %s", master.Host, master.Port, master.ID)
 			}
 			fmt.Print("[")
 			for i, state := range master.States {
