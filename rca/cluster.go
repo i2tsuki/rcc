@@ -14,13 +14,17 @@ import (
 type ClusterNode struct {
 	ID string
 	// FIXME: ip addr
-	IP      string
-	Host    string
-	Port    uint64
-	States  []string
-	Slave   bool
-	Master  bool
-	SlaveOf string
+	IP          string
+	Host        string
+	Port        uint64
+	Flags       []string
+	Slave       bool
+	Master      bool
+	SlaveOf     string
+	PingSent    uint64
+	PongRecv    uint64
+	ConfigEpoch uint64
+	LinkState   string
 }
 
 // ClusterNodes provide 'CLUSTER NODES' command result
@@ -58,12 +62,12 @@ func ClusterNodes(client *redis.Client) (cluster []ClusterNode, err error) {
 		}
 		node.Port = port
 		// Cluster Node state
-		states := strings.Split(rows[2], ",")
-		node.States = states
+		flags := strings.Split(rows[2], ",")
+		node.Flags = flags
 		node.Master = false
 		node.Slave = false
-		for _, state := range states {
-			switch state {
+		for _, flag := range flags {
+			switch flag {
 			case "master":
 				node.Master = true
 			case "slave":

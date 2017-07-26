@@ -84,8 +84,8 @@ func main() {
 
 	var myself rca.ClusterNode
 	for _, node := range cluster {
-		for _, state := range node.States {
-			if state == "myself" {
+		for _, flag := range node.Flags {
+			if flag == "myself" {
 				myself = node
 			}
 		}
@@ -95,12 +95,12 @@ func main() {
 	fmt.Printf("  id: %s\n", myself.ID)
 	fmt.Printf("  host: %s\n", myself.Host)
 	fmt.Printf("  port: %d\n", myself.Port)
-	fmt.Printf("  state: ")
-	for i, state := range myself.States {
-		if len(myself.States)-1 != i {
-			fmt.Printf("%s,", state)
+	fmt.Printf("  flag: ")
+	for i, flag := range myself.Flags {
+		if len(myself.Flags)-1 != i {
+			fmt.Printf("%s,", flag)
 		} else {
-			fmt.Printf("%s\n", state)
+			fmt.Printf("%s\n", flag)
 		}
 	}
 	if myself.Master {
@@ -110,12 +110,12 @@ func main() {
 				fmt.Printf("  - id: %s\n", node.ID)
 				fmt.Printf("    host: %s\n", node.Host)
 				fmt.Printf("    port: %d\n", node.Port)
-				fmt.Printf("    state: ")
-				for i, state := range node.States {
-					if len(node.States)-1 != i {
-						fmt.Printf("%s,", state)
+				fmt.Printf("    flag: ")
+				for i, flag := range node.Flags {
+					if len(node.Flags)-1 != i {
+						fmt.Printf("%s,", flag)
 					} else {
-						fmt.Printf("%s\n", state)
+						fmt.Printf("%s\n", flag)
 					}
 				}
 			}
@@ -128,12 +128,12 @@ func main() {
 				fmt.Printf("  - id: %s\n", node.ID)
 				fmt.Printf("    host: %s\n", node.Host)
 				fmt.Printf("    port: %d\n", node.Port)
-				fmt.Printf("    state: ")
-				for i, state := range node.States {
-					if len(node.States)-1 != i {
-						fmt.Printf("%s,", state)
+				fmt.Printf("    flag: ")
+				for i, flag := range node.Flags {
+					if len(node.Flags)-1 != i {
+						fmt.Printf("%s,", flag)
 					} else {
-						fmt.Printf("%s\n", state)
+						fmt.Printf("%s\n", flag)
 					}
 				}
 			}

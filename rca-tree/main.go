@@ -85,11 +85,11 @@ func main() {
 			}
 			fmt.Printf("%s %s:%d ", master.ID, master.Host, master.Port)
 			fmt.Print("[")
-			for i, state := range master.States {
-				if len(master.States)-1 != i {
-					fmt.Printf("%s,", state)
+			for i, flag := range master.Flags {
+				if len(master.Flags)-1 != i {
+					fmt.Printf("%s,", flag)
 				} else {
-					fmt.Printf("%s", state)
+					fmt.Printf("%s", flag)
 				}
 			}
 			fmt.Print("]\n")
@@ -117,11 +117,11 @@ func main() {
 						}
 						fmt.Printf("%s %s:%d ", slave.ID, slave.Host, slave.Port)
 						fmt.Print("[")
-						for i, state := range slave.States {
-							if len(slave.States)-1 != i {
-								fmt.Printf("%s,", state)
+						for i, flag := range slave.Flags {
+							if len(slave.Flags)-1 != i {
+								fmt.Printf("%s,", flag)
 							} else {
-								fmt.Printf("%s", state)
+								fmt.Printf("%s", flag)
 							}
 						}
 						fmt.Print("]\n")

@@ -76,8 +76,8 @@ func main() {
 
 	var myself rca.ClusterNode
 	for _, node := range cluster {
-		for _, state := range node.States {
-			if state == "myself" {
+		for _, flag := range node.Flags {
+			if flag == "myself" {
 				myself = node
 			}
 		}
