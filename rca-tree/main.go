@@ -92,7 +92,10 @@ func main() {
 					fmt.Printf("%s", flag)
 				}
 			}
-			fmt.Print("]\n")
+			fmt.Print("] ")
+			fmt.Printf("%d %d %d %s %v", master.PingSent, master.PongRecv, master.ConfigEpoch, master.LinkState, master.Slots)
+			fmt.Print("\n")
+
 			nslave := 0
 			for _, slave := range cluster {
 				if slave.Slave {
@@ -124,7 +127,9 @@ func main() {
 								fmt.Printf("%s", flag)
 							}
 						}
-						fmt.Print("]\n")
+						fmt.Print("] ")
+						fmt.Printf("%d %d %d %s", slave.PingSent, slave.PongRecv, slave.ConfigEpoch, slave.LinkState)
+						fmt.Print("\n")
 					}
 				}
 			}

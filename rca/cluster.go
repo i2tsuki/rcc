@@ -10,6 +10,12 @@ import (
 	"github.com/pkg/errors"
 )
 
+// Slot is redis cluster node slot range
+type Slot struct {
+	Start uint64
+	End   uint64
+}
+
 // ClusterNode is redis cluster node struct
 type ClusterNode struct {
 	ID string
@@ -24,7 +30,8 @@ type ClusterNode struct {
 	PingSent    uint64
 	PongRecv    uint64
 	ConfigEpoch uint64
-	LinkState   string
+	LinkState   string // "connected" or "disconnected"
+	Slots       []Slot
 }
 
 // ClusterNodes provide 'CLUSTER NODES' command result
@@ -76,6 +83,54 @@ func ClusterNodes(client *redis.Client) (cluster []ClusterNode, err error) {
 		}
 		// Cluster Node slaveof
 		node.SlaveOf = rows[3]
+
+		// Cluster Node ping sent
+		node.PingSent, err = strconv.ParseUint(rows[4], 10, 64)
+		if err != nil {
+			err = errors.Wrap(err, fmt.Sprintf("%v-%v failed: ", App.Name, App.Version))
+			return nil, err
+		}
+
+		// Cluster Node pong recv
+		node.PongRecv, err = strconv.ParseUint(rows[5], 10, 64)
+		if err != nil {
+			err = errors.Wrap(err, fmt.Sprintf("%v-%v failed: ", App.Name, App.Version))
+			return nil, err
+		}
+
+		// Cluster Node config epoch
+		node.ConfigEpoch, err = strconv.ParseUint(rows[6], 10, 64)
+		if err != nil {
+			err = errors.Wrap(err, fmt.Sprintf("%v-%v failed: ", App.Name, App.Version))
+			return nil, err
+		}
+
+		// Cluster Node link state
+		node.LinkState = rows[7]
+
+		// Cluster Node slot
+		var slots []Slot
+		if node.Master && len(rows) > 8 {
+			for _, sRange := range rows[8:len(rows)] {
+				var slot Slot
+				s := strings.Split(sRange, "-")
+				slot.Start, err = strconv.ParseUint(s[0], 10, 64)
+				if err != nil {
+					err = errors.Wrap(err, fmt.Sprintf("%v-%v failed: ", App.Name, App.Version))
+					return nil, err
+				}
+				slot.End, err = strconv.ParseUint(s[1], 10, 64)
+				if err != nil {
+					err = errors.Wrap(err, fmt.Sprintf("%v-%v failed: ", App.Name, App.Version))
+					return nil, err
+				}
+				slots = append(slots, slot)
+			}
+			node.Slots = slots
+		} else {
+			node.Slots = nil
+		}
+
 		// Append node into cluster
 		cluster = append(cluster, node)
 	}
