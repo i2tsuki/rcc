@@ -1,4 +1,4 @@
-package rca
+package rcc
 
 type app struct {
 	Name    string
@@ -7,6 +7,6 @@ type app struct {
 
 // App include application name and version
 var App = app{
-	Name:    "rca",
+	Name:    "rcc",
 	Version: "0.1.0",
 }

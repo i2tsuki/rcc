@@ -4,14 +4,12 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	// "net"
 	"os"
 	"strings"
 	"text/template"
-	"time"
 
 	"github.com/go-redis/redis"
-	"github.com/kizkoh/rca/rca"
+	"github.com/kizkoh/rcc/rcc"
 	"github.com/pkg/errors"
 )
 
@@ -54,27 +52,24 @@ func main() {
 	DEBUG = debug(verbose)
 
 	args := flags.Args()
-	var master string
-	var slave string
-	if len(args) != 2 {
-		usage()
-		os.Exit(0)
+	var arg string
+	if len(args) == 0 {
+		arg = "127.0.0.1:6379"
 	} else {
-		master = args[len(args)-1]
+		arg = args[len(args)-1]
 	}
-	slave = args[len(args)-2]
 
-	masterClient := redis.NewClient(&redis.Options{
-		Addr: master,
+	client := redis.NewClient(&redis.Options{
+		Addr: arg,
 	})
-	cluster, err := rca.ClusterNodes(masterClient)
+	cluster, err := rcc.ClusterNodes(client)
 	if err != nil {
 		err = errors.Wrap(err, fmt.Sprintf("%v-%v failed: ", App.Name, App.Version))
-		fmt.Fprintf(os.Stderr, "%+v", err)
+		fmt.Printf("%v-%v failed: %v\n", App.Name, App.Version, err)
 		os.Exit(1)
 	}
 
-	var myself rca.ClusterNode
+	var myself rcc.ClusterNode
 	for _, node := range cluster {
 		for _, flag := range node.Flags {
 			if flag == "myself" {
@@ -82,38 +77,55 @@ func main() {
 			}
 		}
 	}
-	masterID := myself.ID
-	masterIP := myself.IP
-	masterPort := fmt.Sprintf("%d", myself.Port)
 
-	slaveClient := redis.NewClient(&redis.Options{
-		Addr: slave,
-	})
-	// ToDo: Assert new slave node is cluster
-	// Assert new slave node is empty
-	if err := rca.AssertEmptyNode(slaveClient); err != nil {
-		err = errors.Wrap(err, fmt.Sprintf("%v-%v failed: ", App.Name, App.Version))
-		fmt.Fprintf(os.Stderr, "%+v", err)
-		os.Exit(1)
+	fmt.Printf("myself:\n")
+	fmt.Printf("  id: %s\n", myself.ID)
+	fmt.Printf("  host: %s\n", myself.Host)
+	fmt.Printf("  port: %d\n", myself.Port)
+	fmt.Printf("  flag: ")
+	for i, flag := range myself.Flags {
+		if len(myself.Flags)-1 != i {
+			fmt.Printf("%s,", flag)
+		} else {
+			fmt.Printf("%s\n", flag)
+		}
 	}
-	if _, err := slaveClient.ClusterMeet(masterIP, masterPort).Result(); err != nil {
-		err = errors.Wrap(err, fmt.Sprintf("%v-%v failed: ", App.Name, App.Version))
-		fmt.Fprintf(os.Stderr, "%+v", err)
-		os.Exit(1)
+	if myself.Master {
+		fmt.Printf("  slaves:\n")
+		for _, node := range cluster {
+			if node.SlaveOf == myself.ID {
+				fmt.Printf("  - id: %s\n", node.ID)
+				fmt.Printf("    host: %s\n", node.Host)
+				fmt.Printf("    port: %d\n", node.Port)
+				fmt.Printf("    flag: ")
+				for i, flag := range node.Flags {
+					if len(node.Flags)-1 != i {
+						fmt.Printf("%s,", flag)
+					} else {
+						fmt.Printf("%s\n", flag)
+					}
+				}
+			}
+		}
 	}
-	// getConfigSignature := func() {
-
-	// }
-	// WaitClusterJoin()
-	time.Sleep(5 * time.Second)
-
-	fmt.Printf("configure node as replica of %s\n", master)
-	if _, err := slaveClient.ClusterReplicate(masterID).Result(); err != nil {
-		err = errors.Wrap(err, fmt.Sprintf("%v-%v failed: ", App.Name, App.Version))
-		fmt.Fprintf(os.Stderr, "%+v", err)
-		os.Exit(1)
+	if myself.Slave {
+		fmt.Printf("  slaveof:\n")
+		for _, node := range cluster {
+			if node.ID == myself.SlaveOf {
+				fmt.Printf("  - id: %s\n", node.ID)
+				fmt.Printf("    host: %s\n", node.Host)
+				fmt.Printf("    port: %d\n", node.Port)
+				fmt.Printf("    flag: ")
+				for i, flag := range node.Flags {
+					if len(node.Flags)-1 != i {
+						fmt.Printf("%s,", flag)
+					} else {
+						fmt.Printf("%s\n", flag)
+					}
+				}
+			}
+		}
 	}
-	fmt.Print("new nodes added correctly\n")
 }
 
 func usage() {

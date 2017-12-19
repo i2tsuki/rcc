@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/kizkoh/rca"
+	"github.com/kizkoh/rcc"
 )
 
 type app struct {
@@ -11,6 +11,6 @@ type app struct {
 
 // App include application name and version
 var App = app{
-	Name:    "rca-add-slave",
-	Version: rca.App.Version,
+	Name:    "rcc-add-slave",
+	Version: rcc.App.Version,
 }

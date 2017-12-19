@@ -1,4 +1,4 @@
-package rca
+package rcc
 
 import (
 	"fmt"
@@ -14,6 +14,7 @@ import (
 type Slot struct {
 	Start uint64
 	End   uint64
+	From  string
 }
 
 // ClusterNode is redis cluster node struct
@@ -113,16 +114,30 @@ func ClusterNodes(client *redis.Client) (cluster []ClusterNode, err error) {
 		if node.Master && len(rows) > 8 {
 			for _, sRange := range rows[8:len(rows)] {
 				var slot Slot
-				s := strings.Split(sRange, "-")
-				slot.Start, err = strconv.ParseUint(s[0], 10, 64)
-				if err != nil {
-					err = errors.Wrap(err, fmt.Sprintf("%v-%v failed: ", App.Name, App.Version))
-					return nil, err
-				}
-				slot.End, err = strconv.ParseUint(s[1], 10, 64)
-				if err != nil {
-					err = errors.Wrap(err, fmt.Sprintf("%v-%v failed: ", App.Name, App.Version))
-					return nil, err
+				if strings.HasPrefix(sRange, "[") {
+					sRange = strings.TrimLeft(sRange, "[")
+					sRange = strings.TrimRight(sRange, "]")
+					s := strings.Split(sRange, "-<-")
+					slot.Start, err = strconv.ParseUint(s[0], 10, 64)
+					if err != nil {
+						err = errors.Wrap(err, fmt.Sprintf("%v-%v failed: ", App.Name, App.Version))
+						return nil, err
+					}
+					slot.End = 0
+					slot.From = s[2]
+				} else {
+					s := strings.Split(sRange, "-")
+					slot.Start, err = strconv.ParseUint(s[0], 10, 64)
+					if err != nil {
+						err = errors.Wrap(err, fmt.Sprintf("%v-%v failed: ", App.Name, App.Version))
+						return nil, err
+					}
+					slot.End, err = strconv.ParseUint(s[1], 10, 64)
+					if err != nil {
+						err = errors.Wrap(err, fmt.Sprintf("%v-%v failed: ", App.Name, App.Version))
+						return nil, err
+					}
+					slot.From = ""
 				}
 				slots = append(slots, slot)
 			}

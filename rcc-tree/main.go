@@ -9,7 +9,7 @@ import (
 	"text/template"
 
 	"github.com/go-redis/redis"
-	"github.com/kizkoh/rca/rca"
+	"github.com/kizkoh/rcc/rcc"
 	"github.com/pkg/errors"
 )
 
@@ -26,12 +26,14 @@ func (debug debug) Printf(f string, v ...interface{}) {
 var DEBUG debug
 
 func main() {
+	var masterOnly = false
 	var help = false
 	var verbose = false
 
 	// parse args
 	flags := flag.NewFlagSet(App.Name, flag.ContinueOnError)
 
+	flags.BoolVar(&masterOnly, "master", masterOnly, "master")
 	flags.BoolVar(&verbose, "verbose", verbose, "verbose")
 	flags.BoolVar(&help, "h", help, "help")
 	flags.BoolVar(&help, "help", help, "help")
@@ -62,70 +64,82 @@ func main() {
 	client := redis.NewClient(&redis.Options{
 		Addr: arg,
 	})
-	cluster, err := rca.ClusterNodes(client)
+	cluster, err := rcc.ClusterNodes(client)
 	if err != nil {
 		err = errors.Wrap(err, fmt.Sprintf("%v-%v failed: ", App.Name, App.Version))
 		fmt.Printf("%v-%v failed: %v\n", App.Name, App.Version, err)
 		os.Exit(1)
 	}
 
-	var myself rca.ClusterNode
-	for _, node := range cluster {
-		for _, flag := range node.Flags {
-			if flag == "myself" {
-				myself = node
+	nmaster := 0
+	for _, master := range cluster {
+		if !master.Slave {
+			nmaster++
+		}
+	}
+	for _, master := range cluster {
+		if !master.Slave {
+			nmaster--
+			if nmaster > 0 {
+				fmt.Print("├─ ")
+			} else {
+				fmt.Print("└─ ")
+			}
+			fmt.Printf("%s %s:%d ", master.ID, master.Host, master.Port)
+			fmt.Print("[")
+			for i, flag := range master.Flags {
+				if len(master.Flags)-1 != i {
+					fmt.Printf("%s,", flag)
+				} else {
+					fmt.Printf("%s", flag)
+				}
+			}
+			fmt.Print("] ")
+			fmt.Printf("%d %d %d %s %v", master.PingSent, master.PongRecv, master.ConfigEpoch, master.LinkState, master.Slots)
+			fmt.Print("\n")
+
+			if !masterOnly {
+				nslave := 0
+				for _, slave := range cluster {
+					if slave.Slave {
+						if slave.SlaveOf == master.ID {
+							nslave++
+						}
+					}
+				}
+				for _, slave := range cluster {
+					if slave.Slave {
+						if slave.SlaveOf == master.ID {
+							nslave--
+							if nmaster > 0 {
+								fmt.Print("│  ")
+							} else {
+								fmt.Print("    ")
+							}
+							if nslave > 0 {
+								fmt.Print("├── ")
+							} else {
+								fmt.Print("└── ")
+							}
+							fmt.Printf("%s %s:%d ", slave.ID, slave.Host, slave.Port)
+							fmt.Print("[")
+							for i, flag := range slave.Flags {
+								if len(slave.Flags)-1 != i {
+									fmt.Printf("%s,", flag)
+								} else {
+									fmt.Printf("%s", flag)
+								}
+							}
+							fmt.Print("] ")
+							fmt.Printf("%d %d %d %s", slave.PingSent, slave.PongRecv, slave.ConfigEpoch, slave.LinkState)
+							fmt.Print("\n")
+						}
+					}
+				}
 			}
 		}
 	}
 
-	fmt.Printf("myself:\n")
-	fmt.Printf("  id: %s\n", myself.ID)
-	fmt.Printf("  host: %s\n", myself.Host)
-	fmt.Printf("  port: %d\n", myself.Port)
-	fmt.Printf("  flag: ")
-	for i, flag := range myself.Flags {
-		if len(myself.Flags)-1 != i {
-			fmt.Printf("%s,", flag)
-		} else {
-			fmt.Printf("%s\n", flag)
-		}
-	}
-	if myself.Master {
-		fmt.Printf("  slaves:\n")
-		for _, node := range cluster {
-			if node.SlaveOf == myself.ID {
-				fmt.Printf("  - id: %s\n", node.ID)
-				fmt.Printf("    host: %s\n", node.Host)
-				fmt.Printf("    port: %d\n", node.Port)
-				fmt.Printf("    flag: ")
-				for i, flag := range node.Flags {
-					if len(node.Flags)-1 != i {
-						fmt.Printf("%s,", flag)
-					} else {
-						fmt.Printf("%s\n", flag)
-					}
-				}
-			}
-		}
-	}
-	if myself.Slave {
-		fmt.Printf("  slaveof:\n")
-		for _, node := range cluster {
-			if node.ID == myself.SlaveOf {
-				fmt.Printf("  - id: %s\n", node.ID)
-				fmt.Printf("    host: %s\n", node.Host)
-				fmt.Printf("    port: %d\n", node.Port)
-				fmt.Printf("    flag: ")
-				for i, flag := range node.Flags {
-					if len(node.Flags)-1 != i {
-						fmt.Printf("%s,", flag)
-					} else {
-						fmt.Printf("%s\n", flag)
-					}
-				}
-			}
-		}
-	}
 }
 
 func usage() {
