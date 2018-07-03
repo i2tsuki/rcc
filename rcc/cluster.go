@@ -76,7 +76,7 @@ func ClusterNodes(client *redis.Client) (cluster []ClusterNode, err error) {
 			return nil, err
 		}
 
-		ip := strings.TrimRight(rows[1], fmt.Sprint(":", port))
+		ip := strings.TrimSuffix(rows[1], fmt.Sprint(":", port))
 		node.IP = ip
 		// Cluster Node host
 		hosts, err := net.LookupAddr(node.IP)
