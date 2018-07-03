@@ -169,9 +169,13 @@ func main() {
 	// var master rcc.ClusterNode
 	for _, node := range cluster {
 		for _, flag := range node.Flags {
+			// TODO: fail state node must be dropped
 			if flag == "master" {
 				// myself = node
 				slotStat, keysStat, _ := statsKeyInShard(node, 0)
+				if slotStat == 0 {
+					continue
+				}
 				usedMemory := statsMemoryInShard(node)
 				fmt.Printf("%s %s:%d ", node.ID, node.Host, node.Port)
 				flag := ""
