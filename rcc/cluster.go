@@ -3,6 +3,7 @@ package rcc
 import (
 	"fmt"
 	"net"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -48,13 +49,35 @@ func ClusterNodes(client *redis.Client) (cluster []ClusterNode, err error) {
 	}
 	val = strings.TrimSpace(val)
 
+	re, err := regexp.Compile(":(\\d+)$")
+	if err != nil {
+		err = errors.Wrap(err, fmt.Sprintf("%v-%v failed: ", App.Name, App.Version))
+		return nil, err
+	}
+
 	for _, line := range strings.Split(val, "\n") {
 		var node ClusterNode
 		rows := strings.Split(line, " ")
 		// Cluster Node ID
 		node.ID = rows[0]
+
 		// Cluster Node IP address
-		node.IP = strings.Split(rows[1], ":")[0]
+		var port uint64
+		submatch := re.FindStringSubmatch(rows[1])
+		if len(submatch) == 2 {
+			port, err = strconv.ParseUint(submatch[1], 10, 64)
+			if err != nil {
+				err = errors.Wrap(err, fmt.Sprintf("%v-%v failed: ", App.Name, App.Version))
+				return nil, err
+			}
+		} else {
+			err = errors.New("Port is not found")
+			err = errors.Wrap(err, fmt.Sprintf("%v-%v failed: ", App.Name, App.Version))
+			return nil, err
+		}
+
+		ip := strings.TrimRight(rows[1], fmt.Sprint(":", port))
+		node.IP = ip
 		// Cluster Node host
 		hosts, err := net.LookupAddr(node.IP)
 		if err != nil || len(hosts) == 0 {
@@ -63,12 +86,8 @@ func ClusterNodes(client *redis.Client) (cluster []ClusterNode, err error) {
 			node.Host = hosts[0]
 		}
 		// Cluster Node port number
-		port, err := strconv.ParseUint(strings.Split(rows[1], ":")[1], 10, 64)
-		if err != nil {
-			err = errors.Wrap(err, fmt.Sprintf("%v-%v failed: ", App.Name, App.Version))
-			return nil, err
-		}
 		node.Port = port
+
 		// Cluster Node state
 		flags := strings.Split(rows[2], ",")
 		node.Flags = flags
