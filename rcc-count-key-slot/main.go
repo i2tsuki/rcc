@@ -98,74 +98,6 @@ func main() {
 		return stat["used_memory"]
 	}
 
-	statsKeyInShard := func(node rcc.ClusterNode, rank int) (slotStat int, keysStat int, pl PairList) {
-		client := redis.NewClient(&redis.Options{
-			Addr: fmt.Sprintf("%v:%v", node.IP, node.Port),
-		})
-
-		pos := 0
-
-		for _, s := range node.Slots {
-			pos = int(s.Start)
-			slotStat += int(s.End) - int(s.Start)
-			if rank > 0 {
-				for pos < int(s.End) {
-					cmd := client.ClusterCountKeysInSlot(pos)
-					pl = append(pl, Pair{
-						Key:   pos,
-						Value: cmd.Val(),
-					})
-				}
-			}
-		}
-		pl = rankBySlotCount(pl)
-
-		keysStat = 0
-		expiresStat := 0
-
-		res := client.Info("keyspace").Val()
-		for _, line := range strings.Split(res, "\r\n") {
-			if strings.HasPrefix(line, "#") {
-				continue
-			}
-
-			record := strings.SplitN(line, ":", 2)
-			if len(record) < 2 {
-				continue
-			}
-
-			key, value := record[0], record[1]
-
-			if strings.HasPrefix(key, "db") {
-				kv := strings.SplitN(value, ",", 3)
-				keys, expires := kv[0], kv[1]
-
-				keysStr := strings.SplitN(keys, "=", 2)
-				keysv, err := strconv.Atoi(keysStr[1])
-				if err != nil {
-					// TODO: Error handling
-					// logger.Warningf("Failed to parse db keys. %s", err)
-					os.Exit(1)
-				}
-				keysStat += keysv
-
-				expiresStr := strings.SplitN(expires, "=", 2)
-				expiresv, err := strconv.Atoi(expiresStr[1])
-				if err != nil {
-					// TODO: Error handling
-					// logger.Warningf("Failed to parse db expires. %s", err)
-					os.Exit(1)
-				}
-				expiresStat += expiresv
-			}
-		}
-
-		// for _, p := range pl {
-		// 	fmt.Printf("%d, %d\n", p.Key, p.Value)
-		// }
-		return slotStat, keysStat, pl
-	}
-
 	// var master rcc.ClusterNode
 	for _, node := range cluster {
 		for _, flag := range node.Flags {
@@ -191,10 +123,74 @@ func main() {
 				fmt.Printf("slots:%5d count:%8d avg:%5d ", slotStat, keysStat, keysStat/slotStat)
 				fmt.Printf("used_memory:%12s", usedMemory)
 				fmt.Print("\n")
-
 			}
 		}
 	}
+}
+
+func statsKeyInShard(node rcc.ClusterNode, rank int) (slotStat int, keysStat int, pl PairList) {
+	client := redis.NewClient(&redis.Options{
+		Addr: fmt.Sprintf("%v:%v", node.IP, node.Port),
+	})
+
+	pos := 0
+
+	for _, s := range node.Slots {
+		pos = int(s.Start)
+		slotStat += int(s.End) - int(s.Start)
+		if rank > 0 {
+			for pos < int(s.End) {
+				cmd := client.ClusterCountKeysInSlot(pos)
+				pl = append(pl, Pair{
+					Key:   pos,
+					Value: cmd.Val(),
+				})
+			}
+		}
+	}
+	pl = rankBySlotCount(pl)
+
+	keysStat = 0
+	expiresStat := 0
+
+	res := client.Info("keyspace").Val()
+	for _, line := range strings.Split(res, "\r\n") {
+		if strings.HasPrefix(line, "#") {
+			continue
+		}
+
+		record := strings.SplitN(line, ":", 2)
+		if len(record) < 2 {
+			continue
+		}
+
+		key, value := record[0], record[1]
+
+		if strings.HasPrefix(key, "db") {
+			kv := strings.SplitN(value, ",", 3)
+			keys, expires := kv[0], kv[1]
+
+			keysStr := strings.SplitN(keys, "=", 2)
+			keysv, err := strconv.Atoi(keysStr[1])
+			if err != nil {
+				// TODO: Error handling
+				// logger.Warningf("Failed to parse db keys. %s", err)
+				os.Exit(1)
+			}
+			keysStat += keysv
+
+			expiresStr := strings.SplitN(expires, "=", 2)
+			expiresv, err := strconv.Atoi(expiresStr[1])
+			if err != nil {
+				// TODO: Error handling
+				// logger.Warningf("Failed to parse db expires. %s", err)
+				os.Exit(1)
+			}
+			expiresStat += expiresv
+		}
+	}
+
+	return slotStat, keysStat, pl
 }
 
 func rankBySlotCount(pl PairList) PairList {
