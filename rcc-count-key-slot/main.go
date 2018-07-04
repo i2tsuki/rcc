@@ -28,8 +28,11 @@ func (debug debug) Printf(f string, v ...interface{}) {
 var DEBUG debug
 
 func main() {
-	var help = false
-	var verbose = false
+	var (
+		help    = false
+		verbose = false
+		host    = "127.0.0.1:6379"
+	)
 
 	// parse args
 	flags := flag.NewFlagSet(App.Name, flag.ContinueOnError)
@@ -54,16 +57,12 @@ func main() {
 	DEBUG = debug(verbose)
 
 	args := flags.Args()
-	var host string
-	if len(args) == 0 {
-		host = "127.0.0.1:6379"
+	if len(args) == 1 {
+		host = args[0]
 	} else if len(args) > 1 {
 		usage()
 		os.Exit(1)
-	} else {
-		host = args[0]
 	}
-
 	client := redis.NewClient(&redis.Options{
 		Addr: host,
 	})
