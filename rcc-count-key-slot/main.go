@@ -135,12 +135,32 @@ func main() {
 	}
 }
 
-func statsKeyInShard(node rcc.ClusterNode, rank int) (slotStat int, keysStat int, pl PairList) {
+func GetMasterNode(nodes []rcc.ClusterNode, node rcc.ClusterNode) (master rcc.ClusterNode) {
+	var masterNodeID = ""
+	master = node
+	// ToDo: check node healthcheck
+	for _, flag := range node.Flags {
+		if flag == "slave" {
+			masterNodeID = node.SlaveOf
+			break
+		}
+	}
+	for _, node = range nodes {
+		if node.ID == masterNodeID {
+			master = node
+			break
+		}
+	}
+	return master
+}
+
+func statsKeyInShard(nodes []rcc.ClusterNode, node rcc.ClusterNode, rank int) (slotStat int, keysStat int, pl PairList) {
 	client := redis.NewClient(&redis.Options{
 		Addr: fmt.Sprintf("%v:%v", node.IP, node.Port),
 	})
 
 	pos := 0
+	node = GetMasterNode(nodes, node)
 
 	for _, s := range node.Slots {
 		pos = int(s.Start)
@@ -155,7 +175,7 @@ func statsKeyInShard(node rcc.ClusterNode, rank int) (slotStat int, keysStat int
 			}
 		}
 	}
-	pl = rankBySlotCount(pl)
+
 	if rank > 0 {
 		pl = rankBySlotCount(pl)
 	}
