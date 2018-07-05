@@ -159,20 +159,18 @@ func statsKeyInShard(nodes []rcc.ClusterNode, node rcc.ClusterNode, rank int) (s
 		Addr: fmt.Sprintf("%v:%v", node.IP, node.Port),
 	})
 
-	pos := 0
 	node = GetMasterNode(nodes, node)
 
-	for _, s := range node.Slots {
-		pos = int(s.Start)
-		slotStat += int(s.End) - int(s.Start)
-		if rank > 0 {
-			for pos < int(s.End) {
-				cmd := client.ClusterCountKeysInSlot(pos)
-				pl = append(pl, Pair{
-					Key:   pos,
-					Value: cmd.Val(),
-				})
-			}
+	for _, slot := range node.Slots {
+		pos := int(slot.Start)
+		end := int(slot.End)
+		for ; pos < end; pos++ {
+			cmd := client.ClusterCountKeysInSlot(pos)
+			pl = append(pl, Pair{
+				Key:   pos,
+				Value: cmd.Val(),
+			})
+			slotCount += int(cmd.Val())
 		}
 	}
 
