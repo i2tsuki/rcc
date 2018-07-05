@@ -30,6 +30,7 @@ var DEBUG debug
 func main() {
 	var (
 		rank    = 0
+		cluster = false
 		help    = false
 		verbose = false
 		host    = "127.0.0.1:6379"
@@ -39,6 +40,7 @@ func main() {
 	flags := flag.NewFlagSet(App.Name, flag.ContinueOnError)
 
 	flags.IntVar(&rank, "rank", rank, "rank")
+	flags.BoolVar(&cluster, "cluster", cluster, "cluster")
 	flags.BoolVar(&verbose, "verbose", verbose, "verbose")
 	flags.BoolVar(&help, "h", help, "help")
 	flags.BoolVar(&help, "help", help, "help")
@@ -68,7 +70,7 @@ func main() {
 	client := redis.NewClient(&redis.Options{
 		Addr: host,
 	})
-	cluster, err := rcc.ClusterNodes(client)
+	nodes, err := rcc.ClusterNodes(client)
 	if err != nil {
 		err = errors.Wrap(err, fmt.Sprintf("%v-%v failed: ", App.Name, App.Version))
 		fmt.Fprintf(os.Stderr, "%+v", err)
@@ -99,36 +101,57 @@ func main() {
 		return stat["used_memory"]
 	}
 
-	// var master rcc.ClusterNode
-	for _, node := range cluster {
-		for _, flag := range node.Flags {
-			// TODO: fail state node must be dropped
-			if flag == "master" {
-				// myself = node
-				slotStat, keysStat, pl := statsKeyInShard(node, rank)
-				if slotStat == 0 {
-					continue
-				}
-				usedMemory := statsMemoryInShard(node)
-				fmt.Printf("%s %s:%d ", node.ID, node.Host, node.Port)
-				flag := ""
-				for i, f := range node.Flags {
-					if len(node.Flags)-1 != i {
-						flag = fmt.Sprintf("%s%s,", flag, f)
-					} else {
-						flag = fmt.Sprintf("%s%s", flag, f)
+	if cluster {
+		for _, node := range nodes {
+			for _, flag := range node.Flags {
+				// TODO: fail state node must be dropped
+				if flag == "master" {
+					// myself = node
+					slotStat, keysStat, pl := statsKeyInShard(nodes, node, rank)
+					if slotStat == 0 {
+						continue
 					}
-				}
+					usedMemory := statsMemoryInShard(node)
+					fmt.Printf("%s %s:%d ", node.ID, node.Host, node.Port)
+					flags := ""
+					for i, f := range node.Flags {
+						if len(node.Flags)-1 != i {
+							flags = fmt.Sprintf("%s%s,", flags, f)
+						} else {
+							flags = fmt.Sprintf("%s%s", flags, f)
+						}
+					}
 
-				fmt.Printf("%-16s", "["+flag+"]")
-				fmt.Printf("slots:%5d count:%8d avg:%5d ", slotStat, keysStat, keysStat/slotStat)
-				fmt.Printf("used_memory:%12s", usedMemory)
-				fmt.Print("\n")
-				for i, slot := range pl {
-					if i >= rank {
-						break
+					fmt.Printf("%-16s", "["+flags+"]")
+					fmt.Printf("slots:%5d count:%8d avg:%5d ", slotStat, keysStat, keysStat/slotStat)
+					fmt.Printf("used_memory:%12s", usedMemory)
+					fmt.Print("\n")
+					for i, slot := range pl {
+						if i >= rank {
+							break
+						}
+						fmt.Println(slot)
 					}
-					fmt.Println(slot)
+				}
+			}
+		}
+	} else {
+		for _, node := range nodes {
+			for _, flag := range node.Flags {
+				if flag == "myself" {
+					fmt.Printf("%s %s:%d ", node.ID, node.Host, node.Port)
+					usedMemory := statsMemoryInShard(node)
+					fmt.Printf("used_memory:%12s", usedMemory)
+					slotStat, keysStat, pl := statsKeyInShard(nodes, node, rank)
+					fmt.Printf("%-16s", node.Flags)
+					fmt.Printf("slots:%5d count:%8d avg:%5d ", slotStat, keysStat, keysStat/slotStat)
+					fmt.Print("\n")
+					for i, slot := range pl {
+						if i >= rank {
+							break
+						}
+						fmt.Println(slot)
+					}
 				}
 			}
 		}
@@ -250,6 +273,7 @@ author:
 
 options:
    --rank                                       Print rank of slot capacity
+   --cluster                                    Print cluster information
    --verbose                                    Print verbose messages
    --help, -h                                   Show help
    --version                                    Print the version
