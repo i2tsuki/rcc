@@ -29,6 +29,7 @@ var DEBUG debug
 
 func main() {
 	var (
+		rank    = 0
 		help    = false
 		verbose = false
 		host    = "127.0.0.1:6379"
@@ -37,6 +38,7 @@ func main() {
 	// parse args
 	flags := flag.NewFlagSet(App.Name, flag.ContinueOnError)
 
+	flags.IntVar(&rank, "rank", rank, "rank")
 	flags.BoolVar(&verbose, "verbose", verbose, "verbose")
 	flags.BoolVar(&help, "h", help, "help")
 	flags.BoolVar(&help, "help", help, "help")
@@ -103,7 +105,7 @@ func main() {
 			// TODO: fail state node must be dropped
 			if flag == "master" {
 				// myself = node
-				slotStat, keysStat, _ := statsKeyInShard(node, 0)
+				slotStat, keysStat, pl := statsKeyInShard(node, rank)
 				if slotStat == 0 {
 					continue
 				}
@@ -122,6 +124,12 @@ func main() {
 				fmt.Printf("slots:%5d count:%8d avg:%5d ", slotStat, keysStat, keysStat/slotStat)
 				fmt.Printf("used_memory:%12s", usedMemory)
 				fmt.Print("\n")
+				for i, slot := range pl {
+					if i >= rank {
+						break
+					}
+					fmt.Println(slot)
+				}
 			}
 		}
 	}
@@ -148,6 +156,9 @@ func statsKeyInShard(node rcc.ClusterNode, rank int) (slotStat int, keysStat int
 		}
 	}
 	pl = rankBySlotCount(pl)
+	if rank > 0 {
+		pl = rankBySlotCount(pl)
+	}
 
 	keysStat = 0
 	expiresStat := 0
@@ -220,6 +231,7 @@ author:
    kizkoh<GitHub: https://github.com/kizkoh>
 
 options:
+   --rank                                       Print rank of slot capacity
    --verbose                                    Print verbose messages
    --help, -h                                   Show help
    --version                                    Print the version
